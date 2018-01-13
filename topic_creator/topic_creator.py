@@ -13,13 +13,10 @@ from werkzeug import check_password_hash, generate_password_hash
 DATABASE = '/tmp/topics.db'
 PER_PAGE = 30
 DEBUG = True
-SECRET_KEY = b'_5#y2L"F4Q8z\n\xec]/'
+SECRET_KEY = 'odAVG3OOUb5fGA'
 
-# create our little application :)
-app = Flask('topics')
+app = Flask('topic_creator')
 app.config.from_object(__name__)
-# app.config.from_envvar('MINITWIT_SETTINGS', silent=True)
-
 
 def get_db():
     """Opens a new database connection if there is none yet for the
@@ -53,7 +50,6 @@ def initdb_command():
     """Creates the database tables."""
     init_db()
     print('Initialized the database.')
-
 
 def query_db(query, args=(), one=False):
     """Queries the database and returns a list of dictionaries."""
