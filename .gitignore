@@ -1,0 +1,4 @@
+topic-creator.db
+.eggs/
+venv/
+.idea/
