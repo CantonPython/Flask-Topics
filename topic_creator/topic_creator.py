@@ -1,13 +1,11 @@
 # -*- coding: utf-8 -*-
 
-import time
-from sqlite3 import dbapi2 as sqlite3
-from hashlib import md5
 from datetime import datetime
-from flask import Flask, request, session, url_for, redirect, \
-     render_template, abort, g, flash, _app_ctx_stack
-from werkzeug import check_password_hash, generate_password_hash
+from sqlite3 import dbapi2 as sqlite3
 
+from flask import Flask, request, session, url_for, redirect, \
+    render_template, g, flash, _app_ctx_stack
+from werkzeug import check_password_hash, generate_password_hash
 
 # configuration
 DATABASE = '/tmp/topics.db'
@@ -17,6 +15,7 @@ SECRET_KEY = 'odAVG3OOUb5fGA'
 
 app = Flask('topic_creator')
 app.config.from_object(__name__)
+
 
 def get_db():
     """Opens a new database connection if there is none yet for the
@@ -51,6 +50,7 @@ def initdb_command():
     init_db()
     print('Initialized the database.')
 
+
 def query_db(query, args=(), one=False):
     """Queries the database and returns a list of dictionaries."""
     cur = get_db().execute(query, args)
@@ -70,12 +70,6 @@ def format_datetime(timestamp):
     return datetime.utcfromtimestamp(timestamp).strftime('%Y-%m-%d @ %H:%M')
 
 
-def gravatar_url(email, size=80):
-    """Return the gravatar image for the given email address."""
-    return 'https://www.gravatar.com/avatar/%s?d=identicon&s=%d' % \
-        (md5(email.strip().lower().encode('utf-8')).hexdigest(), size)
-
-
 @app.before_request
 def before_request():
     g.user = None
@@ -85,105 +79,51 @@ def before_request():
 
 
 @app.route('/')
-def timeline():
+def topics():
     """Shows a users timeline or if no user is logged in it will
     redirect to the public timeline.  This timeline shows the user's
     messages as well as all the messages of followed users.
     """
     if not g.user:
-        return redirect(url_for('public_timeline'))
-    return render_template('timeline.html', messages=query_db('''
-        select message.*, user.* from message, user
-        where message.author_id = user.user_id and (
-            user.user_id = ? or
-            user.user_id in (select whom_id from follower
-                                    where who_id = ?))
-        order by message.pub_date desc limit ?''',
-        [session['user_id'], session['user_id'], PER_PAGE]))
+        return redirect(url_for('all_topics'))
+
+    return render_template('topics.html', topics=query_db('''select * from topic where 
+        author_id = ? order by topic.post_date
+        ''', [session['user_id']]))
 
 
-@app.route('/public')
-def public_timeline():
+@app.route('/all_topics')
+def all_topics():
     """Displays the latest messages of all users."""
-    return render_template('timeline.html', messages=query_db('''
-        select message.*, user.* from message, user
-        where message.author_id = user.user_id
-        order by message.pub_date desc limit ?''', [PER_PAGE]))
+    return render_template('topics.html', topics=query_db('''
+        select * from topic where id is not null
+        order by topic.post_date
+    '''))
 
 
-@app.route('/<username>')
-def user_timeline(username):
-    """Display's a users tweets."""
-    profile_user = query_db('select * from user where username = ?',
-                            [username], one=True)
-    if profile_user is None:
-        abort(404)
-    followed = False
-    if g.user:
-        followed = query_db('''select 1 from follower where
-            follower.who_id = ? and follower.whom_id = ?''',
-            [session['user_id'], profile_user['user_id']],
-            one=True) is not None
-    return render_template('timeline.html', messages=query_db('''
-            select message.*, user.* from message, user where
-            user.user_id = message.author_id and user.user_id = ?
-            order by message.pub_date desc limit ?''',
-            [profile_user['user_id'], PER_PAGE]), followed=followed,
-            profile_user=profile_user)
-
-
-@app.route('/<username>/follow')
-def follow_user(username):
-    """Adds the current user as follower of the given user."""
+@app.route('/add_topic', methods=['GET', 'POST'])
+def add_topic():
     if not g.user:
-        abort(401)
-    whom_id = get_user_id(username)
-    if whom_id is None:
-        abort(404)
-    db = get_db()
-    db.execute('insert into follower (who_id, whom_id) values (?, ?)',
-              [session['user_id'], whom_id])
-    db.commit()
-    flash('You are now following "%s"' % username)
-    return redirect(url_for('user_timeline', username=username))
+        return redirect(url_for('all_topics'))
 
-
-@app.route('/<username>/unfollow')
-def unfollow_user(username):
-    """Removes the current user as follower of the given user."""
-    if not g.user:
-        abort(401)
-    whom_id = get_user_id(username)
-    if whom_id is None:
-        abort(404)
-    db = get_db()
-    db.execute('delete from follower where who_id=? and whom_id=?',
-              [session['user_id'], whom_id])
-    db.commit()
-    flash('You are no longer following "%s"' % username)
-    return redirect(url_for('user_timeline', username=username))
-
-
-@app.route('/add_message', methods=['POST'])
-def add_message():
-    """Registers a new message for the user."""
-    if 'user_id' not in session:
-        abort(401)
-    if request.form['text']:
+    if request.method == 'POST':
+        description = request.form['description']
         db = get_db()
-        db.execute('''insert into message (author_id, text, pub_date)
-          values (?, ?, ?)''', (session['user_id'], request.form['text'],
-                                int(time.time())))
+        db.execute('''insert into topic (author_id, description)
+            values (?, ?)''', [session['user_id'], description])
         db.commit()
-        flash('Your message was recorded')
-    return redirect(url_for('timeline'))
+
+        flash("Topic created")
+        return redirect(url_for('all_topics'))
+    else:
+        return render_template('add_topic.html')
 
 
 @app.route('/login', methods=['GET', 'POST'])
 def login():
     """Logs the user in."""
     if g.user:
-        return redirect(url_for('timeline'))
+        return redirect(url_for('topics'))
     error = None
     if request.method == 'POST':
         user = query_db('''select * from user where
@@ -196,7 +136,7 @@ def login():
         else:
             flash('You were logged in')
             session['user_id'] = user['user_id']
-            return redirect(url_for('timeline'))
+            return redirect(url_for('topics'))
     return render_template('login.html', error=error)
 
 
@@ -204,7 +144,7 @@ def login():
 def register():
     """Registers the user."""
     if g.user:
-        return redirect(url_for('timeline'))
+        return redirect(url_for('topics'))
     error = None
     if request.method == 'POST':
         if not request.form['username']:
@@ -235,9 +175,12 @@ def logout():
     """Logs the user out."""
     flash('You were logged out')
     session.pop('user_id', None)
-    return redirect(url_for('public_timeline'))
+    return redirect(url_for('all_topics'))
 
 
-# add some filters to jinja
-app.jinja_env.filters['datetimeformat'] = format_datetime
-app.jinja_env.filters['gravatar'] = gravatar_url
+# some functions for templates
+def is_current_path(path):
+   return request.path == path
+
+
+app.jinja_env.globals.update(is_current_path=is_current_path)

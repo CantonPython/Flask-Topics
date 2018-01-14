@@ -1,0 +1,19 @@
+{% extends "layout.html" %}
+
+{% block title %}
+Topics
+{% endblock %}
+
+{% block body %}
+
+{% if not topics %}
+    <div class="alert alert-danger" role="alert">
+      This is a danger alert—check it out!
+    </div>
+{% else %}
+    {% for topic in topics %}
+        <p>{{topic.description}}</p>
+    {% endfor %}
+{% endif %}
+
+{% endblock %}

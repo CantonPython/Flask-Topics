@@ -1,0 +1,14 @@
+{% extends "layout.html" %}
+{% block title %}Add a topic{% endblock %}
+
+{% block body %}
+<form method="post">
+    <div class="form-group">
+        <label for="topicDescription">Topic</label>
+        <textarea class="form-control" id="topicDescription"name="description" id="" cols="30" rows="10"></textarea>
+    </div>
+
+
+    <input type="submit" class="btn btn-primary" value="Add" />
+</form>
+{% endblock %}
