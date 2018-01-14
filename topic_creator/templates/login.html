@@ -1,22 +1,26 @@
 {% extends "layout.html" %}
 {% block title %}Sign In{% endblock %}
 {% block body %}
+
+<div class="container">
     <h2>Sign In</h2>
-    {% if error %}<div class="error"><strong>Error:</strong> {{ error }}</div>{% endif %}
+    {% if error %}
+        <div class="alert alert-warning" role="alert">
+            {{ error }}
+        </div>
+    {% endif %}
 
     <form method="post">
         <div class="form-group">
-            <label for="exampleInputUsername">Username</label>
-            <input type="username" class="form-control" name="username" id="exampleInputUsername" placeholder="Enter username" value="{{ request.form.username }}">
+            <input type="text" class="form-control" name="username" placeholder="Enter username" value="{{ request.form.username }}">
         </div>
 
         <div class="form-group">
-            <label for="exampleInputPassword1">Password</label>
-            <input type="password" class="form-control" name="password" id="exampleInputPassword1" placeholder="Password">
+            <input type="password" class="form-control" name="password" placeholder="Password">
         </div>
 
         <button type="submit" class="btn btn-primary">Register</button>
     </form>
-
+</div>
 {% endblock %}
 

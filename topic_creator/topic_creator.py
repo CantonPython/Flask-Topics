@@ -2,17 +2,14 @@
 
 from datetime import datetime
 from sqlite3 import dbapi2 as sqlite3
-
 from flask import Flask, request, session, url_for, redirect, \
     render_template, g, flash, _app_ctx_stack
 from werkzeug import check_password_hash, generate_password_hash
+import time
 
 # configuration
 DATABASE = '/tmp/topics.db'
-PER_PAGE = 30
-DEBUG = True
 SECRET_KEY = 'odAVG3OOUb5fGA'
-
 app = Flask('topic_creator')
 app.config.from_object(__name__)
 
@@ -78,23 +75,20 @@ def before_request():
                           [session['user_id']], one=True)
 
 
-@app.route('/')
+@app.route('/topics')
 def topics():
-    """Shows a users timeline or if no user is logged in it will
-    redirect to the public timeline.  This timeline shows the user's
-    messages as well as all the messages of followed users.
-    """
+    """Shows all of a users submitted topics"""
     if not g.user:
-        return redirect(url_for('all_topics'))
+        return redirect('/')
 
     return render_template('topics.html', topics=query_db('''select * from topic where 
-        author_id = ? order by topic.post_date
+        author_id = ? order by topic.votes
         ''', [session['user_id']]))
 
 
-@app.route('/all_topics')
+@app.route('/')
 def all_topics():
-    """Displays the latest messages of all users."""
+    """Shows all topics submitted."""
     return render_template('topics.html', topics=query_db('''
         select * from topic where id is not null
         order by topic.post_date
@@ -109,14 +103,31 @@ def add_topic():
     if request.method == 'POST':
         description = request.form['description']
         db = get_db()
-        db.execute('''insert into topic (author_id, description)
-            values (?, ?)''', [session['user_id'], description])
+        db.execute('''insert into topic (author_id, description, post_date)
+            values (?, ?, ?)''', [session['user_id'], description, int(time.time())])
         db.commit()
 
         flash("Topic created")
         return redirect(url_for('all_topics'))
     else:
         return render_template('add_topic.html')
+
+
+@app.route('/upvote/<topic_id>')
+def upvote(topic_id):
+    if not g.user:
+        return redirect('/')
+
+    db = get_db()
+    # get current count
+    topic = query_db('select votes from topic where id = ?', [topic_id], one=True)
+
+    # increment the value
+    votes = topic['votes'] + 1
+    db.execute('update topic set votes = ? where id = ?', [votes, topic_id])
+    db.commit()
+
+    return redirect('/')
 
 
 @app.route('/login', methods=['GET', 'POST'])
@@ -180,7 +191,14 @@ def logout():
 
 # some functions for templates
 def is_current_path(path):
-   return request.path == path
+    return request.path == path
+
+
+def get_topic_author_name(author_id):
+    user = query_db('select * from user where user_id = ?', [author_id], one=True)
+    return user['username']
 
 
 app.jinja_env.globals.update(is_current_path=is_current_path)
+app.jinja_env.globals.update(get_topic_author_name=get_topic_author_name)
+app.jinja_env.globals.update(format_datetime=format_datetime)

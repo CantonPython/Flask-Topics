@@ -15,7 +15,7 @@
         <div class="container">
             <ul class="nav justify-content-end">
                 <li class="nav-item">
-                    <a class="nav-link" href="{{ url_for('all_topics') }}">All Topics</a>
+                    <a class="nav-link" href="/">Home</a>
                 </li>
 
                 {% if g.user %}
@@ -29,6 +29,10 @@
                         <a class="nav-link" href="{{ url_for('logout') }}">Sign Out [{{ g.user.username }}]</a>
                     </li>
                 {% else %}
+                    <li class="nav-item">
+                        <a href="{{ url_for('register') }}" class="nav-link">Register</a>
+                    </li>
+
                     <li class="nav-item">
                         <a class="nav-link {{ is_current_path(url_for('login')) }}" href="{{ url_for('login') }}">Sign In</a>
                     </li>

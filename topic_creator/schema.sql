@@ -11,6 +11,6 @@ create table topic (
   id integer primary key autoincrement,
   author_id integer not null,
   description text not null,
-  votes integer,
+  votes integer default 0,
   post_date integer
 );

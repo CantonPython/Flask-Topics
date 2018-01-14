@@ -6,25 +6,31 @@ Topics
 
 {% block body %}
 
-{% if not topics %}
-    <div class="alert alert-danger" role="alert">
-      This is a danger alert—check it out!
-    </div>
-{% else %}
-
-    <div class="container topics">
+<div class="container topics">
+    <h2>Topics</h2>
+    {% if not topics %}
+        <p><i>No one has posted a topic</i></p>
+    {% else %}
         <div class="row">
-            <div class="col-sm-1"><strong>Votes</strong></div>
-            <div class="col-sm-11"><strong>Description</strong></div>
+            <div class="col-sm-2"><strong>Votes</strong></div>
+            <div class="col-sm-2"><strong></strong></div>
+            <div class="col-sm-2"><strong></strong></div>
+            <div class="col-sm-6"><strong>Description</strong></div>
         </div>
 
         {% for topic in topics %}
             <div class="row">
-                <div class="col-sm-1">{{ topic.votes or 0 }}</div>
-                <div class="col-sm-11">{{ topic.description }}</div>
+                <div class="col-sm-2">{{ topic.votes or 0 }}</div>
+                <div class="col-sm-2"><a href="">thumbs down</a></div>
+                <div class="col-sm-2"><a href="{{ url_for('upvote', topic_id=topic.id) }}">thumbs up</a></div>
+                <div class="col-sm-6">
+                    <p>{{ topic.description }}</p>
+                    <p>Submitted by: {{ get_topic_author_name(topic.author_id) }}</p>
+                    <p>On: {{ format_datetime(topic.post_date) }}</p>
+                </div>
             </div>
         {% endfor %}
-    </div>
-{% endif %}
+    {% endif %}
+</div>
 
 {% endblock %}
