@@ -1,0 +1,7 @@
+.topics .row:nth-of-type(even) {
+    background-color: #c7fcd6;
+}
+
+.topics .row {
+    padding: 20px;
+}

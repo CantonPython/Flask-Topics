@@ -11,9 +11,20 @@ Topics
       This is a danger alert—check it out!
     </div>
 {% else %}
-    {% for topic in topics %}
-        <p>{{topic.description}}</p>
-    {% endfor %}
+
+    <div class="container topics">
+        <div class="row">
+            <div class="col-sm-1"><strong>Votes</strong></div>
+            <div class="col-sm-11"><strong>Description</strong></div>
+        </div>
+
+        {% for topic in topics %}
+            <div class="row">
+                <div class="col-sm-1">{{ topic.votes or 0 }}</div>
+                <div class="col-sm-11">{{ topic.description }}</div>
+            </div>
+        {% endfor %}
+    </div>
 {% endif %}
 
 {% endblock %}
