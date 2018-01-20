@@ -14,3 +14,9 @@ create table topic (
   votes integer default 0,
   post_date integer
 );
+
+drop table if exists user_topic;
+create table user_topic (
+  user_id integer not null,
+  topic_id integer not null
+)
