@@ -76,66 +76,6 @@ def before_request():
                           [session['user_id']], one=True)
 
 
-@app.route('/topics')
-def topics():
-    """Shows all of a users submitted topics"""
-    if not g.user:
-        return redirect('/')
-
-    return render_template('topics.html', topics=query_db('''select * from topic where 
-        author_id = ? order by topic.votes
-        ''', [session['user_id']]))
-
-
-@app.route('/')
-def all_topics():
-    """Shows all topics submitted."""
-    return render_template('topics.html', topics=query_db('''
-        select * from topic where id is not null
-        order by topic.post_date
-    '''))
-
-
-@app.route('/add_topic', methods=['GET', 'POST'])
-def add_topic():
-    if not g.user:
-        return redirect(url_for('all_topics'))
-
-    if request.method == 'POST':
-        description = request.form['description']
-        db = get_db()
-        db.execute('''insert into topic (author_id, description, post_date)
-            values (?, ?, ?)''', [session['user_id'], description, int(time.time())])
-        db.commit()
-
-        flash("Topic created")
-        return redirect(url_for('all_topics'))
-    else:
-        return render_template('add_topic.html')
-
-
-@app.route('/upvote/<topic_id>')
-def upvote(topic_id):
-    if not g.user:
-        return redirect('/')
-
-    # check if the user has already voted on this
-    if user_already_voted(topic_id):
-        return
-
-    db = get_db()
-    # get current count
-    topic = query_db('select votes from topic where id = ?', [topic_id], one=True)
-
-    # increment the value
-    votes = topic['votes'] + 1
-    db.execute('update topic set votes = ? where id = ?', [votes, topic_id])
-    db.execute('insert into user_topic (user_id, topic_id) values (?, ?)', [session['user_id'], topic_id])
-    db.commit()
-
-    return redirect('/')
-
-
 @app.route('/login', methods=['GET', 'POST'])
 def login():
     """Logs the user in."""
@@ -155,6 +95,33 @@ def login():
             session['user_id'] = user['user_id']
             return redirect(url_for('topics'))
     return render_template('login.html', error=error)
+
+
+@app.route('/')
+def all_topics():
+    """Shows all topics submitted."""
+    return render_template('topics.html', topics=query_db('''
+        select * from topic where id is not null
+        order by topic.post_date
+    '''))
+
+
+# TODO
+@app.route('/add_topic', methods=['GET', 'POST'])
+def add_topic():
+    return
+
+
+# TODO
+@app.route('/topics')
+def topics():
+    return
+
+
+# TODO
+@app.route('/upvote/<topic_id>')
+def upvote(topic_id):
+    return
 
 
 @app.route('/register', methods=['GET', 'POST'])
@@ -195,14 +162,6 @@ def logout():
     return redirect(url_for('all_topics'))
 
 
-def user_already_voted(topic_id):
-    votes = query_db('select * from user_topic where user_id = ? and topic_id = ?',
-                     [session['user_id'], topic_id],
-                     one=True)
-
-    return True if votes else False
-
-
 # some functions for templates
 def is_current_path(path):
     return request.path == path
@@ -213,7 +172,6 @@ def get_topic_author_name(author_id):
     return user['username']
 
 
-app.jinja_env.globals.update(user_already_voted=user_already_voted)
 app.jinja_env.globals.update(is_current_path=is_current_path)
 app.jinja_env.globals.update(get_topic_author_name=get_topic_author_name)
 app.jinja_env.globals.update(format_datetime=format_datetime)
