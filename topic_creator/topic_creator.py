@@ -6,9 +6,10 @@ from flask import Flask, request, session, url_for, redirect, \
     render_template, g, flash, _app_ctx_stack
 from werkzeug import check_password_hash, generate_password_hash
 import time
+import os
 
 # configuration
-DATABASE = '/tmp/topics.db'
+DATABASE = os.path.dirname(__file__) + '/../topics.db'
 SECRET_KEY = 'odAVG3OOUb5fGA'
 app = Flask('topic_creator')
 app.config.from_object(__name__)
