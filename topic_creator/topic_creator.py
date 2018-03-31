@@ -10,6 +10,7 @@ import os
 
 # configuration
 DATABASE = os.path.dirname(__file__) + '/../topics.db'
+# used for sessions
 SECRET_KEY = 'odAVG3OOUb5fGA'
 app = Flask('topic_creator')
 app.config.from_object(__name__)
@@ -61,11 +62,6 @@ def get_user_id(username):
     rv = query_db('select user_id from user where username = ?',
                   [username], one=True)
     return rv[0] if rv else None
-
-
-def format_datetime(timestamp):
-    """Format a timestamp for display."""
-    return datetime.utcfromtimestamp(timestamp).strftime('%Y-%m-%d @ %H:%M')
 
 
 @app.before_request
@@ -124,6 +120,9 @@ def upvote(topic_id):
     return
 
 
+# TODO down vote
+
+
 @app.route('/register', methods=['GET', 'POST'])
 def register():
     """Registers the user."""
@@ -170,6 +169,11 @@ def is_current_path(path):
 def get_topic_author_name(author_id):
     user = query_db('select * from user where user_id = ?', [author_id], one=True)
     return user['username']
+
+
+def format_datetime(timestamp):
+    """Format a timestamp for display."""
+    return datetime.utcfromtimestamp(timestamp).strftime('%Y-%m-%d @ %H:%M')
 
 
 app.jinja_env.globals.update(is_current_path=is_current_path)
