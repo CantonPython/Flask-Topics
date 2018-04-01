@@ -3,6 +3,13 @@
 
 {% block body %}
     <div class="container">
+
+        {% if error %}
+            <div class="alert alert-danger" role="alert">
+                {{ error }}
+            </div>
+        {% endif %}
+
         <form method="post">
             <div class="form-group">
                 <textarea placeholder="topic" class="form-control" name="description" cols="30" rows="10"></textarea>

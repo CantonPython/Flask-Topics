@@ -102,25 +102,104 @@ def all_topics():
     '''))
 
 
-# TODO
 @app.route('/add_topic', methods=['GET', 'POST'])
 def add_topic():
-    return
+    if not g.user:
+        return redirect('/')
+
+    if request.method == 'POST':
+        description = request.form['description']
+        if not description:
+            return render_template('add_topic.html', error="Description is required")
+        else:
+            db = get_db()
+            db.execute('''
+                insert into topic (author_id, description, post_date) values (?,?,?)
+            ''', [session['user_id'], description, int(time.time())])
+            db.commit()
+            return redirect(url_for('topics'))
+    else:
+        return render_template('add_topic.html')
 
 
-# TODO
 @app.route('/topics')
 def topics():
-    return
+    if not g.user:
+        return redirect('/')
+
+    topics = query_db('''
+        select * from topic where author_id = ? order by post_date
+    ''', [session['user_id']])
+
+    return render_template('topics.html', topics=topics)
 
 
-# TODO
 @app.route('/upvote/<topic_id>')
 def upvote(topic_id):
-    return
+    if not g.user:
+        return redirect('/')
+
+    if user_already_voted(topic_id):
+        return redirect('/')
+
+    result = query_db('''
+    select votes from topic where id = ?
+    ''', [topic_id], one=True)
+
+    current_votes = result['votes']
+    current_votes += 1
+
+    db = get_db()
+    db.execute('''
+    update topic set votes = ? where id = ?
+    ''', [current_votes, topic_id])
+
+    db.execute('''
+        insert into user_topic (user_id, topic_id) values(?, ?)
+    ''', [session['user_id'], topic_id])
+
+    db.commit()
+
+    return redirect(url_for('all_topics'))
 
 
-# TODO down vote
+@app.route('/downvote/<topic_id>')
+def downvote(topic_id):
+    if not g.user:
+        return redirect('/')
+
+    if user_already_voted(topic_id):
+        return redirect('/')
+
+    result = query_db('''
+    select votes from topic where id = ?
+    ''', [topic_id], one=True)
+
+    current_votes = result['votes']
+    current_votes -= 1
+
+    db = get_db()
+    db.execute('''
+    update topic set votes = ? where id = ?
+    ''', [current_votes, topic_id])
+
+    db.execute('''
+        insert into user_topic (user_id, topic_id) values(?, ?)
+    ''', [session['user_id'], topic_id])
+
+    db.commit()
+
+    return redirect(url_for('all_topics'))
+
+
+def user_already_voted(topic_id):
+    votes = query_db('''
+         select * from user_topic where user_id = ? and topic_id = ?
+    ''', [session['user_id'], topic_id])
+
+    return True if votes else False
+
+
 
 
 @app.route('/register', methods=['GET', 'POST'])
