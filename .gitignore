@@ -3,3 +3,6 @@ topics.db
 venv/
 .idea/
 topic_creator/__pycache__/
+*.swp
+tags
+topic_creator.egg-info/

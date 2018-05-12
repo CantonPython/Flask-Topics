@@ -7,6 +7,7 @@ from flask import Flask, request, session, url_for, redirect, \
 from werkzeug import check_password_hash, generate_password_hash
 import time
 import os
+from .model import Session, User, Topic, UsernameTaken
 
 # configuration
 DATABASE = os.path.dirname(__file__) + '/../topics.db'
@@ -14,7 +15,6 @@ DATABASE = os.path.dirname(__file__) + '/../topics.db'
 SECRET_KEY = 'odAVG3OOUb5fGA'
 app = Flask('topic_creator')
 app.config.from_object(__name__)
-
 
 def get_db():
     """Opens a new database connection if there is none yet for the
@@ -198,8 +198,6 @@ def user_already_voted(topic_id):
     ''', [session['user_id'], topic_id])
 
     return True if votes else False
-
-
 
 
 @app.route('/register', methods=['GET', 'POST'])
