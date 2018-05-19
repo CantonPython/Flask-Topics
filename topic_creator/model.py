@@ -101,6 +101,12 @@ class Topic(Base):
             self.voted_by.append(user)
             session.commit()
 
+    def downvote(self, session, user):
+        if user not in self.voted_by:
+            self.votes -= 1
+            self.voted_by.append(user)
+            session.commit()
+
     @classmethod
     def get_by_id(cls, session, id_):
         return session.query(cls).filter_by(id=id_).one()
@@ -112,6 +118,10 @@ class Topic(Base):
         session.add(topic)
         session.commit()
         return topic
+
+    @classmethod
+    def get_all_by_author(cls, session, author_id):
+        return session.query(cls).filter_by(author_id=author_id).all()
 
 
 engine = create_engine("sqlite:///topics.db", echo=False)

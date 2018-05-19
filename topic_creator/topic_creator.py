@@ -14,18 +14,9 @@ from .model import Session, User, Topic, UsernameTaken
 DATABASE = os.path.dirname(__file__) + '/../topics.db'
 # used for sessions
 SECRET_KEY = 'odAVG3OOUb5fGA'
+db_session = Session()
 app = Flask('topic_creator')
 app.config.from_object(__name__)
-
-def get_db():
-    """Opens a new database connection if there is none yet for the
-    current application context.
-    """
-    top = _app_ctx_stack.top
-    if not hasattr(top, 'sqlite_db'):
-        top.sqlite_db = sqlite3.connect(app.config['DATABASE'])
-        top.sqlite_db.row_factory = sqlite3.Row
-    return top.sqlite_db
 
 
 @app.teardown_appcontext
@@ -34,28 +25,6 @@ def close_database(exception):
     top = _app_ctx_stack.top
     if hasattr(top, 'sqlite_db'):
         top.sqlite_db.close()
-
-
-def init_db():
-    """Initializes the database."""
-    db = get_db()
-    with app.open_resource('schema.sql', mode='r') as f:
-        db.cursor().executescript(f.read())
-    db.commit()
-
-
-@app.cli.command('initdb')
-def initdb_command():
-    """Creates the database tables."""
-    init_db()
-    print('Initialized the database.')
-
-
-def query_db(query, args=(), one=False):
-    """Queries the database and returns a list of dictionaries."""
-    cur = get_db().execute(query, args)
-    rv = cur.fetchall()
-    return (rv[0] if rv else None) if one else rv
 
 
 def get_user_id(username):
@@ -69,7 +38,7 @@ def get_user_id(username):
 def before_request():
     g.user = None
     if 'user_id' in session:
-        g.user = User.get_by_id(Session(), session['user_id'])
+        g.user = User.get_by_id(db_session, session['user_id'])
 
 
 @app.route('/login', methods=['GET', 'POST'])
@@ -101,7 +70,7 @@ def hash(value):
 @app.route('/')
 def all_topics():
     """Shows all topics submitted."""
-    topics = Session().query(Topic)
+    topics = db_session.query(Topic)
     return render_template('topics.html', topics=topics)
 
 
@@ -115,10 +84,10 @@ def add_topic():
         if not description:
             return render_template('add_topic.html', error="Description is required")
         else:
-            session = Session()
             topic = Topic(request.form["description"])
-            session.add(topic)
-            session.commit()
+            topic.author = g.user
+            db_session.add(topic)
+            db_session.commit()
 
             return redirect(url_for('topics'))
     else:
@@ -130,10 +99,7 @@ def topics():
     if not g.user:
         return redirect('/')
 
-    topics = query_db('''
-        select * from topic where author_id = ? order by post_date
-    ''', [session['user_id']])
-
+    topics = Topic.get_all_by_author(db_session, session['user_id'])
     return render_template('topics.html', topics=topics)
 
 
@@ -142,26 +108,8 @@ def upvote(topic_id):
     if not g.user:
         return redirect('/')
 
-    if user_already_voted(topic_id):
-        return redirect('/')
-
-    result = query_db('''
-    select votes from topic where id = ?
-    ''', [topic_id], one=True)
-
-    current_votes = result['votes']
-    current_votes += 1
-
-    db = get_db()
-    db.execute('''
-    update topic set votes = ? where id = ?
-    ''', [current_votes, topic_id])
-
-    db.execute('''
-        insert into user_topic (user_id, topic_id) values(?, ?)
-    ''', [session['user_id'], topic_id])
-
-    db.commit()
+    topic = Topic.get_by_id(db_session, topic_id)
+    topic.upvote(db_session, g.user)
 
     return redirect(url_for('all_topics'))
 
@@ -171,26 +119,8 @@ def downvote(topic_id):
     if not g.user:
         return redirect('/')
 
-    if user_already_voted(topic_id):
-        return redirect('/')
-
-    result = query_db('''
-    select votes from topic where id = ?
-    ''', [topic_id], one=True)
-
-    current_votes = result['votes']
-    current_votes -= 1
-
-    db = get_db()
-    db.execute('''
-    update topic set votes = ? where id = ?
-    ''', [current_votes, topic_id])
-
-    db.execute('''
-        insert into user_topic (user_id, topic_id) values(?, ?)
-    ''', [session['user_id'], topic_id])
-
-    db.commit()
+    topic = Topic.get_by_id(db_session, topic_id)
+    topic.downvote(db_session, g.user)
 
     return redirect(url_for('all_topics'))
 
@@ -221,15 +151,14 @@ def register():
             error = 'The two passwords do not match'
             error = 'The username is already taken'
         else:
-            session = Session()
             try:
                 new_user = User(request.form["username"], request.form["email"], request.form["password"])
-                session.add(new_user)
-                session.commit()
+                db_session.add(new_user)
+                db_session.commit()
                 flash('You were successfully registered and can login now')
                 return redirect(url_for('login'))
             except Exception as e:
-                session.rollback()
+                db_session.rollback()
                 error = e 
 
     return render_template('register.html', error=error)
@@ -248,16 +177,4 @@ def is_current_path(path):
     return request.path == path
 
 
-def get_topic_author_name(author_id):
-    user = query_db('select * from user where user_id = ?', [author_id], one=True)
-    return user['username']
-
-
-def format_datetime(timestamp):
-    """Format a timestamp for display."""
-    return datetime.utcfromtimestamp(timestamp).strftime('%Y-%m-%d @ %H:%M')
-
-
 app.jinja_env.globals.update(is_current_path=is_current_path)
-app.jinja_env.globals.update(get_topic_author_name=get_topic_author_name)
-app.jinja_env.globals.update(format_datetime=format_datetime)
