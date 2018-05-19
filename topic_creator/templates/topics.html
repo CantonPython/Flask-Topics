@@ -23,11 +23,15 @@ Topics
                 <div class="col-sm-2">{{ topic.votes or 0 }}</div>
 
                 <div class="col-sm-2">
-                    <a href="{{ url_for('downvote', topic_id=topic.id) }}">thumbs down</a>
+                    {% if g.user %}
+                        <a href="{{ url_for('downvote', topic_id=topic.id) }}">thumbs down</a>
+                    {% endif %}
                 </div>
 
                 <div class="col-sm-2">
-                    <a href="{{ url_for('upvote', topic_id=topic.id) }}">thumbs up</a>
+                    {% if g.user %}
+                        <a href="{{ url_for('upvote', topic_id=topic.id) }}">thumbs up</a>
+                    {% endif %}
                 </div>
 
 
