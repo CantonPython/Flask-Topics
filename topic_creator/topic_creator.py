@@ -216,17 +216,19 @@ def register():
             error = 'You have to enter a password'
         elif request.form['password'] != request.form['password2']:
             error = 'The two passwords do not match'
-        elif get_user_id(request.form['username']) is not None:
             error = 'The username is already taken'
         else:
-            db = get_db()
-            db.execute('''insert into user (
-              username, email, pw_hash) values (?, ?, ?)''',
-              [request.form['username'], request.form['email'],
-               generate_password_hash(request.form['password'])])
-            db.commit()
-            flash('You were successfully registered and can login now')
-            return redirect(url_for('login'))
+            session = Session()
+            try:
+                new_user = User(request.form["username"], request.form["email"], request.form["password"])
+                session.add(new_user)
+                session.commit()
+                flash('You were successfully registered and can login now')
+                return redirect(url_for('login'))
+            except Exception as e:
+                session.rollback()
+                error = e 
+
     return render_template('register.html', error=error)
 
 

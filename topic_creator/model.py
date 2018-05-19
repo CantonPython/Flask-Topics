@@ -17,7 +17,7 @@ from sqlalchemy.exc import IntegrityError
 
 def hash(value):
     md5 = hashlib.md5()
-    md5.update(value)
+    md5.update(value.encode("utf-8"))
     return md5.hexdigest()
 
 class UsernameTaken(Exception):
