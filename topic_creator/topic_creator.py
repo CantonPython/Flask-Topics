@@ -7,6 +7,7 @@ from flask import Flask, request, session, url_for, redirect, \
 from werkzeug import check_password_hash, generate_password_hash
 import time
 import os
+import hashlib
 from .model import Session, User, Topic, UsernameTaken
 
 # configuration
@@ -68,8 +69,7 @@ def get_user_id(username):
 def before_request():
     g.user = None
     if 'user_id' in session:
-        g.user = query_db('select * from user where user_id = ?',
-                          [session['user_id']], one=True)
+        g.user = User.get_by_id(Session(), session['user_id'])
 
 
 @app.route('/login', methods=['GET', 'POST'])
@@ -79,27 +79,30 @@ def login():
         return redirect(url_for('topics'))
     error = None
     if request.method == 'POST':
-        user = query_db('''select * from user where
-            username = ?''', [request.form['username']], one=True)
+        user = User.get_by_username(Session(), request.form['username'])
+
         if user is None:
             error = 'Invalid username'
-        elif not check_password_hash(user['pw_hash'],
-                                     request.form['password']):
+        elif not user.passwd == hash(request.form['password']):
             error = 'Invalid password'
         else:
             flash('You were logged in')
-            session['user_id'] = user['user_id']
+            session['user_id'] = user.id
             return redirect(url_for('topics'))
     return render_template('login.html', error=error)
+
+
+def hash(value):
+    md5 = hashlib.md5()
+    md5.update(value.encode("utf-8"))
+    return md5.hexdigest()
 
 
 @app.route('/')
 def all_topics():
     """Shows all topics submitted."""
-    return render_template('topics.html', topics=query_db('''
-        select * from topic where id is not null
-        order by topic.post_date
-    '''))
+    topics = Session().query(Topic)
+    return render_template('topics.html', topics=topics)
 
 
 @app.route('/add_topic', methods=['GET', 'POST'])
@@ -112,11 +115,11 @@ def add_topic():
         if not description:
             return render_template('add_topic.html', error="Description is required")
         else:
-            db = get_db()
-            db.execute('''
-                insert into topic (author_id, description, post_date) values (?,?,?)
-            ''', [session['user_id'], description, int(time.time())])
-            db.commit()
+            session = Session()
+            topic = Topic(request.form["description"])
+            session.add(topic)
+            session.commit()
+
             return redirect(url_for('topics'))
     else:
         return render_template('add_topic.html')

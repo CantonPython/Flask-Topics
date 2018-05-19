@@ -33,8 +33,8 @@ Topics
 
                 <div class="col-sm-6">
                     <p>{{ topic.description }}</p>
-                    <p>Submitted by: {{ get_topic_author_name(topic.author_id) }}</p>
-                    <p>On: {{ format_datetime(topic.post_date) }}</p>
+                    <p>Submitted by: {{ topic.author.email }}</p>
+                    <p>On: {{ topic.post_date }}</p>
                 </div>
             </div>
         {% endfor %}

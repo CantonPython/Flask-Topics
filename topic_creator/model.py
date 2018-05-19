@@ -46,6 +46,7 @@ class User(Base):
         self.email = email
         self.passwd = hash(passwd)
 
+
     def __repr__(self):
         return "<User(id={self.id}, " \
                "username='{self.username}', " \

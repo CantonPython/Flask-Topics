@@ -3,7 +3,7 @@ create table user (
   user_id integer primary key autoincrement,
   username text not null,
   email text not null,
-  pw_hash text not null
+  passwd text not null
 );
 
 drop table if exists topic;
